@@ -31,9 +31,6 @@ Param(
 $connection = Get-AutomationConnection -Name AzureRunAsConnection
 Login-AzureRmAccount -ServicePrincipal -Tenant $connection.TenantID -ApplicationID $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint
 
-# If Script onPremises
-#Login-AzureRmAccount -SubscriptionId 27e39ad3-d393-4d60-b2df-cc2a631491b2
-
 # Local variables
 $CertificatePassword = "Passw@rd123***"
 
