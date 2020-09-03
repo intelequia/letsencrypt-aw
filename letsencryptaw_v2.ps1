@@ -18,6 +18,10 @@
 #      - Due to deprecation of ACMEv1, a new script is required to use ACMEv2.
 #        The module to use is called ACME-PS.
 #
+#      UPDATE 2020-09-03
+#      - Migrated to Az modules.
+#        Following modules are needed now: Az.Accounts, Az.Network, Az.Storage
+#
 #######################################################################################
 
 Param(
@@ -30,10 +34,12 @@ Param(
     [string]$AGOldCertName
 )
 
-## Azure Login ##
-# If Runbook for Azure Automation
+# Ensures that no login info is saved after the runbook is done
+Disable-AzContextAutosave
+
+# Log in as the service principal from the Runbook
 $connection = Get-AutomationConnection -Name AzureRunAsConnection
-Login-AzureRmAccount -ServicePrincipal -Tenant $connection.TenantID -ApplicationID $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint
+Login-AzAccount -ServicePrincipal -Tenant $connection.TenantID -ApplicationId $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint
 
 # Create a state object and save it to the harddrive
 $state = New-ACMEState -Path $env:TEMP
@@ -77,9 +83,9 @@ $fileName = $env:TMP + '\' + $challenge.Token;
 Set-Content -Path $fileName -Value $challenge.Data.Content -NoNewline;
 
 $blobName = ".well-known/acme-challenge/" + $challenge.Token
-$storageAccount = Get-AzureRmStorageAccount -ResourceGroupName $STResourceGroupName -Name $storageName
+$storageAccount = Get-AzStorageAccount -ResourceGroupName $STResourceGroupName -Name $storageName
 $ctx = $storageAccount.Context
-Set-AzureStorageBlobContent -File $fileName -Container "public" -Context $ctx -Blob $blobName
+Set-AzStorageBlobContent -File $fileName -Container "public" -Context $ctx -Blob $blobName
 
 # Signal the ACME server that the challenge is ready
 $challenge | Complete-ACMEChallenge $state;
@@ -108,9 +114,9 @@ $password = ConvertTo-SecureString -String "Passw@rd123***" -Force -AsPlainText
 Export-ACMECertificate $state -Order $order -CertificateKey $certKey -Path "$env:TEMP\$domain.pfx" -Password $password;
 
 # Delete blob to check DNS
-Remove-AzureStorageBlob -Container "public" -Context $ctx -Blob $blobName
+Remove-AzStorageBlob -Container "public" -Context $ctx -Blob $blobName
 
 ### RENEW APPLICATION GATEWAY CERTIFICATE ###
-$appgw = Get-AzureRmApplicationGateway -ResourceGroupName $AGResourceGroupName -Name $AGName
-Set-AzureRmApplicationGatewaySSLCertificate -Name $AGOldCertName -ApplicationGateway $appgw -CertificateFile "$env:TEMP\$domain.pfx" -Password $password
-Set-AzureRmApplicationGateway -ApplicationGateway $appgw
+$appgw = Get-AzApplicationGateway -ResourceGroupName $AGResourceGroupName -Name $AGName
+Set-AzApplicationGatewaySSLCertificate -Name $AGOldCertName -ApplicationGateway $appgw -CertificateFile "$env:TEMP\$domain.pfx" -Password $password
+Set-AzApplicationGateway -ApplicationGateway $appgw
