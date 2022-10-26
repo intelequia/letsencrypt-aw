@@ -26,7 +26,7 @@
 
 Param(
     [string]$domain,
-	[string]$wwwDomain,
+    [string]$wwwDomain,
     [string]$EmailAddress,
     [string]$STResourceGroupName,
     [string]$storageName,
@@ -76,31 +76,31 @@ $identifiers = @($rootIdentifier, $wwwIdentifier);
 $order = New-ACMEOrder $state -Identifiers $identifiers;
 
 # Fetch the authorizations for that order
-$authorizations  = @(Get-ACMEAuthorization -State $state -Order $order);
+$authorizations = @(Get-ACMEAuthorization -State $state -Order $order);
 
 $storageAccount = Get-AzStorageAccount -ResourceGroupName $STResourceGroupName -Name $storageName
 
-foreach($authZ in $authorizations) {
-	# Select a challenge to fullfill
-	$challenge = Get-ACMEChallenge $state $authZ "http-01";
+foreach ($authZ in $authorizations) {
+    # Select a challenge to fullfill
+    $challenge = Get-ACMEChallenge $state $authZ "http-01";
 
-	# Inspect the challenge data
-	$challenge.Data;
+    # Inspect the challenge data
+    $challenge.Data;
 
-	# Create the file requested by the challenge
-	$fileName = $env:TMP + '\' + $challenge.Token;
-	Set-Content -Path $fileName -Value $challenge.Data.Content -NoNewline;
+    # Create the file requested by the challenge
+    $fileName = $env:TMP + '\' + $challenge.Token;
+    Set-Content -Path $fileName -Value $challenge.Data.Content -NoNewline;
 
-	$blobName = ".well-known/acme-challenge/" + $challenge.Token
-	$ctx = $storageAccount.Context
-	Set-AzStorageBlobContent -File $fileName -Container "public" -Context $ctx -Blob $blobName
+    $blobName = ".well-known/acme-challenge/" + $challenge.Token
+    $ctx = $storageAccount.Context
+    Set-AzStorageBlobContent -File $fileName -Container "public" -Context $ctx -Blob $blobName
 
-	# Signal the ACME server that the challenge is ready
-	$challenge | Complete-ACMEChallenge $state;
+    # Signal the ACME server that the challenge is ready
+    $challenge | Complete-ACMEChallenge $state;
 }
 
 # Wait a little bit and update the order, until we see the states
-while($order.Status -notin ("ready","invalid")) {
+while ($order.Status -notin ("ready", "invalid")) {
     Start-Sleep -Seconds 10;
     $order | Update-ACMEOrder $state -PassThru;
 }
@@ -113,7 +113,7 @@ $certKey = New-ACMECertificateKey -Path "$env:TEMP\$domain.key.xml";
 Complete-ACMEOrder $state -Order $order -CertificateKey $certKey;
 
 # Now we wait until the ACME service provides the certificate url
-while(-not $order.CertificateUrl) {
+while (-not $order.CertificateUrl) {
     Start-Sleep -Seconds 15
     $order | Update-ACMEOrder $state -PassThru
 }
