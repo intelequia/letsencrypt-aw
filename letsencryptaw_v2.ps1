@@ -38,8 +38,7 @@ Param(
 Disable-AzContextAutosave
 
 # Log in as the service principal from the Runbook
-$connection = Get-AutomationConnection -Name AzureRunAsConnection
-Login-AzAccount -ServicePrincipal -Tenant $connection.TenantID -ApplicationId $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint
+Connect-AzAccount -Identity
 
 # Create a state object and save it to the harddrive
 $state = New-ACMEState -Path $env:TEMP
